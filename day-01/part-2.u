@@ -1,0 +1,74 @@
+structural type Move
+  = MoveLeft Nat
+  | MoveRight Nat
+
+leftMove = Pattern.join [literal "L", Pattern.capture patterns.number]
+
+rightMove = Pattern.join [literal "R", Pattern.capture patterns.number]
+
+parseLeftMove : Text -> Optional Move
+parseLeftMove str =
+  Pattern.run leftMove str
+    |> Optional.flatMap parseToNat
+    |> (Optional.map cases x -> Move.MoveLeft x)
+
+parseRightMove : Text -> Optional Move
+parseRightMove str =
+  Pattern.run rightMove str
+    |> Optional.flatMap parseToNat
+    |> (Optional.map cases x -> Move.MoveRight x)
+
+parseToNat : ([Text], Text) -> Optional Nat
+parseToNat ls = match at1 ls with
+  num +: [] -> Nat.fromText num
+  _         -> None
+
+parseMove : Text -> Optional Move
+parseMove str = parseLeftMove str |> Optional.orElse (parseRightMove str)
+
+parseInput : Text -> [Move]
+parseInput str = lines str |> List.filterMap parseMove
+
+flattenMove : Move -> [Move]
+flattenMove move = match move with
+  MoveLeft num -> List.replicate num (cases () -> MoveLeft 1)
+  MoveRight num -> List.replicate num (cases () -> MoveRight 1)
+
+flattenInput: [Move] -> [Move]
+flattenInput = List.flatMap flattenMove
+
+type State = {dialPosition: Int, zeroCount: Nat}
+
+applyMove : State -> Move -> State
+applyMove state move =
+  (State dialPosition zeroCount) = state
+  newDialPosition = match move with
+      MoveLeft num -> (dialPosition - Nat.toInt num) % (Nat.toInt 100)
+      MoveRight num -> (dialPosition + Nat.toInt num) % (Nat.toInt 100)
+  State newDialPosition (if newDialPosition == +0 then zeroCount + 1 else zeroCount)
+
+findPassword : [Move] -> State
+findPassword = List.foldLeft (applyMove) (State +50 0)
+
+printPassword : State -> '{IO, Exception} ()
+printPassword state = do
+  print "Dial Position: "
+  print (Int.toText (dialPosition state))
+  printLine ""
+  print "Zero Count: "
+  print (Nat.toText (zeroCount state))
+  printLine ""
+
+main : '{IO, Exception} ()
+main = do
+  contents = readFileUtf8 (FilePath "inputs/puzzle.txt")
+  moves = parseInput contents
+  flattend = flattenInput moves
+  password = findPassword flattend
+  print "Dial Position: "
+  print (Int.toText (dialPosition password))
+  printLine ""
+  print "Zero Count: "
+  print (Nat.toText (zeroCount password))
+  printLine ""
+
