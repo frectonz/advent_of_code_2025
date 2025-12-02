@@ -50,11 +50,8 @@ fn is_invalid(id: Int, chunk_size: Int) -> Bool {
       let assert Ok(first) = list.first(segments)
 
       let all_equal = list.all(segments, fn(segment) { segment == first })
-      let segment_count =
-        { int.to_float(id_digits) /. int.to_float(chunk_size) }
-        |> float.ceiling
-        |> float.truncate
 
+      let segment_count = ceiling_div(id_digits, chunk_size)
       let correct_length = list.length(segments) == segment_count
 
       case all_equal && correct_length {
@@ -66,45 +63,33 @@ fn is_invalid(id: Int, chunk_size: Int) -> Bool {
 }
 
 pub fn digit_chunks(num: Int, size: Int) -> List(Int) {
-  let digits = count_digits(num)
-  let iterations = digits / size
-  digit_chunks_inner(num, size, iterations, [])
+  digit_chunks_inner(num, size, [])
 }
 
-fn digit_chunks_inner(
-  num: Int,
-  size: Int,
-  iterations: Int,
-  nums: List(Int),
-) -> List(Int) {
-  case iterations < 0 {
-    True -> [num, ..nums] |> list.reverse |> list.filter(fn(x) { x != 0 })
-    False -> {
-      let digits = count_digits(num)
-      let at = digits - size
-      let #(first, second) = split_int(num, at)
-      digit_chunks_inner(second, size, iterations - 1, [first, ..nums])
-    }
+fn digit_chunks_inner(num: Int, size: Int, nums: List(Int)) -> List(Int) {
+  let digits = count_digits(num)
+  let at = digits - size
+
+  case split_int(num, at) {
+    None -> list.reverse(nums)
+    Some(#(first, second)) -> digit_chunks_inner(second, size, [first, ..nums])
   }
 }
 
-fn split_int(id: Int, at: Int) -> #(Int, Int) {
+fn split_int(id: Int, at: Int) -> Option(#(Int, Int)) {
   let power = int_power(10, at)
 
   let first = id / power
   let second = id - { first * power }
 
-  #(first, second)
+  case first == 0 && second == id {
+    True -> None
+    False -> Some(#(first, second))
+  }
 }
 
 pub fn count_digits(num: Int) -> Int {
   count_digits_inner(num, 0)
-}
-
-pub fn int_power(base: Int, power: Int) -> Int {
-  let power = int.to_float(power)
-  let assert Ok(num) = int.power(base, power) |> result.map(float.truncate)
-  num
 }
 
 fn count_digits_inner(num: Int, count: Int) -> Int {
@@ -112,6 +97,18 @@ fn count_digits_inner(num: Int, count: Int) -> Int {
     True -> count_digits_inner(num / 10, count + 1)
     False -> count
   }
+}
+
+fn int_power(base: Int, power: Int) -> Int {
+  let power = int.to_float(power)
+  let assert Ok(num) = int.power(base, power) |> result.map(float.truncate)
+  num
+}
+
+fn ceiling_div(num1: Int, num2: Int) -> Int {
+  int.to_float(num1) /. int.to_float(num2)
+  |> float.ceiling
+  |> float.truncate
 }
 
 fn invalid_ids_inner(range: Range, curr: Int, ids: List(Int)) {
@@ -135,8 +132,8 @@ pub fn invalid_ids(range: Range) -> List(Int) {
 }
 
 pub fn main() {
-  let assert Ok(contents) = simplifile.read(from: "inputs/input.txt")
+  let assert Ok(contents) = simplifile.read(from: "inputs/example.txt")
 
-  let sum = parse_input(contents) |> list.flat_map(invalid_ids) |> int.sum
+  let sum = parse_input(contents) |> list.flat_map(invalid_ids)
   echo sum
 }
