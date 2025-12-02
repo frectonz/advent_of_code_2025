@@ -1,5 +1,75 @@
-import gleam/io
+import gleam/int
+import gleam/list
+import gleam/option.{type Option, None, Some}
+import gleam/string
+import simplifile
 
-pub fn main() -> Nil {
-  io.println("Hello from day_02!")
+pub type Range {
+  Range(start: Int, end: Int)
+}
+
+pub type Input =
+  List(Range)
+
+pub fn parse_range(str: String) -> Option(Range) {
+  string.split_once(str, on: "-")
+  |> option.from_result()
+  |> option.then(fn(range) {
+    let start = range.0 |> to_int
+    let end = range.1 |> to_int
+
+    case start, end {
+      Some(start), Some(end) -> Some(Range(start, end))
+      _, _ -> None
+    }
+  })
+}
+
+pub fn parse_input(str: String) -> List(Range) {
+  str
+  |> string.trim()
+  |> string.split(on: ",")
+  |> list.map(parse_range)
+  |> option.values
+}
+
+fn to_int(s: String) -> Option(Int) {
+  int.parse(s)
+  |> option.from_result
+}
+
+fn invalid_ids_inner(range: Range, curr: Int, ids: List(Int)) {
+  case curr == range.end + 1 {
+    True -> ids
+    False -> {
+      let curr_string = curr |> int.to_string
+      let curr_string_length = string.length(curr_string)
+
+      let midpoint = curr_string_length / 2
+      let first = string.drop_end(from: curr_string, up_to: midpoint)
+      let second = string.drop_start(from: curr_string, up_to: midpoint)
+
+      let length_is_even = int.is_even(curr_string_length)
+
+      let new_count = case first == second && length_is_even {
+        True -> {
+          list.append(ids, [curr])
+        }
+        False -> ids
+      }
+
+      invalid_ids_inner(range, curr + 1, new_count)
+    }
+  }
+}
+
+pub fn invalid_ids(range: Range) -> List(Int) {
+  invalid_ids_inner(range, range.start, [])
+}
+
+pub fn main() {
+  let assert Ok(contents) = simplifile.read(from: "inputs/input.txt")
+
+  let sum = parse_input(contents) |> list.flat_map(invalid_ids) |> int.sum
+  echo sum
 }
