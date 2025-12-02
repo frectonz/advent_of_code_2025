@@ -38,6 +38,9 @@
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
           buildInputs = [
+            pkgs.gleam
+            pkgs.erlang
+            pkgs.rebar3
             pkgs.unison-ucm
           ];
         };
