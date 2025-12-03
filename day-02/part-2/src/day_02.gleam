@@ -134,6 +134,6 @@ pub fn invalid_ids(range: Range) -> List(Int) {
 pub fn main() {
   let assert Ok(contents) = simplifile.read(from: "inputs/example.txt")
 
-  let sum = parse_input(contents) |> list.flat_map(invalid_ids)
+  let sum = parse_input(contents) |> list.flat_map(invalid_ids) |> int.sum
   echo sum
 }
