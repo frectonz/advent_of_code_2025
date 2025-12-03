@@ -3,6 +3,17 @@ module Part2
 import System.File
 import Data.String
 import Data.Nat
+import Debug.Trace
+
+record BatteryBank where
+  constructor MkBatteryBank
+  power : Nat
+
+Show BatteryBank where
+  show (MkBatteryBank power) = show power
+
+BatteryBanks = List BatteryBank
+Input = List BatteryBanks
 
 charToNat : Char -> Maybe Nat
 charToNat '0' = Just 0
@@ -17,12 +28,6 @@ charToNat '8' = Just 8
 charToNat '9' = Just 9
 charToNat _ = Nothing
 
-parseBank : List Char -> List Nat
-parseBank chars = List.mapMaybe charToNat chars
-
-parseInput: String -> List (List Nat)
-parseInput str = unpack str |> Data.String.lines' |> map (parseBank)
-
 mapWithIndex : (Nat -> a -> b) -> List a -> List b
 mapWithIndex f xs = go 0 xs
   where
@@ -30,15 +35,11 @@ mapWithIndex f xs = go 0 xs
     go _ [] = []
     go i (x :: xs) = f i x :: go (S i) xs
 
-filterWithIndex : (Nat -> a -> Bool) -> List a -> List a
-filterWithIndex p xs = go 0 xs
-  where
-    go : Nat -> List a -> List a
-    go _ [] = []
-    go i (x :: xs) =
-      if p i x
-         then x :: go (S i) xs
-         else      go (S i) xs
+parseBank : List Char -> BatteryBanks
+parseBank chars = chars |> List.mapMaybe charToNat |> mapWithIndex (\idx, x => MkBatteryBank x)
+
+parseInput: String -> Input
+parseInput str = unpack str |> Data.String.lines' |> map parseBank
 
 combineDigits : List Nat -> Nat
 combineDigits xs = xs
@@ -46,117 +47,51 @@ combineDigits xs = xs
   |> mapWithIndex (\idx, x => x * (power 10 idx))
   |> sum
 
-
-compareTuple : (Nat, Nat) -> (Nat, Nat) -> Ordering
-compareTuple (i, x) (j, y) = if x == y then compare j i else compare x y
-
--- def solve_bank_part2(s):
---  if len(s) < 12:
---   return 0
---  r, i = [], -1
---  for k in range(12):
---   w = s[i+1:len(s)-12+k+1]
---   m = max(w)
---   i = i+1 + w.index(m)
---   r.append(m)
---
--- ​string maxJolt;
---  int n = s.size(),
---  k = 12;
---  for (int i = 0; i < n; i++) {
---   while (!maxJolt.empty() && maxJolt.back() < s[i] && (maxJolt.size() + (n - i)) > k) {
---     maxJolt.pop_back(); } if (maxJolt.size() < k) maxJolt.push_back(s[i]);
---   }
---  totalSum += stoll(maxJolt);
-
-findLargestWithSuffix : Nat -> List Nat -> Nat
-findLargestWithSuffix n xs =
-  let len = length xs in
-  if len > n then
-    let
-      -- We only care about the first (length - n) elements.
-      -- Any element after this index will not have enough neighbors to the right.
-      validCount = minus len n
-      
-      -- 'take' grabs the valid candidates
-      candidates = take validCount xs
-    in
-      -- We fold over the candidates to find the max.
-      -- We use 0 as the accumulator start because these are Nats.
-      foldl max 0 candidates
-  else
-    0
-
--- findMaxSolution : List Nat -> Nat
--- findMaxSolution bank = 
---   combineDigits ((findLargestWithSuffix 12 bank) ::
---   (findLargestWithSuffix 11 bank) ::
---   (findLargestWithSuffix 10 bank) ::
---   (findLargestWithSuffix 9 bank) ::
---   (findLargestWithSuffix 8 bank) ::
---   (findLargestWithSuffix 7 bank) ::
---   (findLargestWithSuffix 6 bank) ::
---   (findLargestWithSuffix 5 bank) ::
---   (findLargestWithSuffix 4 bank) ::
---   (findLargestWithSuffix 3 bank) ::
---   (findLargestWithSuffix 2 bank) ::
---   (findLargestWithSuffix 1 bank) :: [])
-
-splitAfter : Nat -> List Nat -> List Nat
+splitAfter : Nat -> BatteryBanks -> BatteryBanks
 splitAfter target [] = []
-splitAfter target (x :: xs) =
+splitAfter target (((MkBatteryBank x)) :: xs) =
   if x == target then xs
   else splitAfter target xs
 
-findAndSlice : Nat -> List Nat -> Maybe (Nat, List Nat)
-findAndSlice suffixNeeded bank =
-  let len = length bank in
-  if len <= suffixNeeded then 
-    Nothing -- Impossible to pick a number and leave enough room
-  else
-    let
-      -- We can only look at the first (len - suffixNeeded) items
-      searchWindow = minus len suffixNeeded
-      candidates = take searchWindow bank
-      
-      -- Find the largest number in that valid window
-      maxVal = foldl max 0 candidates
-      
-      -- Slice the bank to use for the NEXT step
-      newBank = splitAfter maxVal bank
-    in
-      Just (maxVal, newBank)
+maxBatteryBank : BatteryBank -> BatteryBank -> BatteryBank
+maxBatteryBank (MkBatteryBank x) (MkBatteryBank y) = if x > y then (MkBatteryBank x) else (MkBatteryBank y)
 
-findMaxSolution : List Nat -> Nat
-findMaxSolution initialBank = 
-  case go 11 initialBank of
-    Nothing => 0
-    Just digitList => (combineDigits digitList)
-  where
-    go : Nat -> List Nat -> Maybe (List Nat)
-    -- Base case: We finished the countdown (passed 0), so we stop.
-    -- Note: We handle 0 inside the recursive step, so if we hit strict -1 (conceptually), we are done.
-    -- Actually, simpler logic: verify count.
-    
-    go k bank = 
-      -- Attempt to find a number that leaves 'k' items after it
-      case findAndSlice k bank of
-        Nothing => Nothing
-        Just (foundDigit, slicedBank) => 
-            if k == 0 then
-                -- We are at the last digit, no more recursion needed
-                Just [foundDigit]
-            else
-                -- We found a digit, now recurse with (k-1) and the SLICED bank
-                case go (minus k 1) slicedBank of
-                    Nothing => Nothing
-                    Just rest => Just (foundDigit :: rest)
+findMax: Nat -> BatteryBanks -> (Nat, BatteryBanks)
+findMax suffixNeeded banks =
+  let
+    len = length banks
+    searchWindow = len `minus` suffixNeeded
+    MkBatteryBank maxBank = banks
+        |> take searchWindow
+        |> foldl maxBatteryBank (MkBatteryBank 0)
+
+    newBanks = splitAfter maxBank banks
+  in
+    (maxBank, newBanks)
+
+findMaxBatteryBank : BatteryBanks -> Nat
+findMaxBatteryBank banks =
+  let
+    (one,    banks) = findMax 11 banks
+    (two,    banks) = findMax 10 banks
+    (three,  banks) = findMax 9  banks
+    (four,   banks) = findMax 8  banks
+    (five,   banks) = findMax 7  banks
+    (six,    banks) = findMax 6  banks
+    (seven,  banks) = findMax 5  banks
+    (eight,  banks) = findMax 4  banks
+    (nine,   banks) = findMax 3  banks
+    (ten,    banks) = findMax 2  banks
+    (eleven, banks) = findMax 1  banks
+    (twelve, banks) = findMax 0  banks
+  in
+  combineDigits [one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve]
 
 findSolution: String -> Nat
 findSolution contents =
   contents
   |> parseInput
-  |> map findMaxSolution
+  |> map findMaxBatteryBank
   |> sum
 
 main : IO ()
