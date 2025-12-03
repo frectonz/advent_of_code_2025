@@ -42,6 +42,9 @@
             pkgs.erlang
             pkgs.rebar3
             pkgs.unison-ucm
+
+            pkgs.idris2
+            pkgs.idris2Packages.idris2Lsp
           ];
         };
       });
