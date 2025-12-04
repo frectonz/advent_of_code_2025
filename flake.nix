@@ -45,6 +45,9 @@
 
             pkgs.idris2
             pkgs.idris2Packages.idris2Lsp
+
+            pkgs.rust-analyzer
+            pkgs.rust-bin.stable.latest.default
           ];
         };
       });
