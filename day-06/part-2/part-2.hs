@@ -45,7 +45,7 @@ parseNumberLine indexes s = go [] s
     isGroup :: String -> Bool
     isGroup []         = True
     isGroup [' ']      = True
-    isGroup (' ' : tl) = elem (length s - length tl) indexes
+    isGroup (' ' : tl) = (length s - length tl) `elem` indexes
     isGroup _          = False
 
     go :: [[Maybe Int]] -> String -> [[Maybe Int]]
