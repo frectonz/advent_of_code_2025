@@ -52,7 +52,6 @@
             pkgs.ocamlPackages.ocaml-lsp
 
             pkgs.ghc
-            pkgs.haskellPackages.Cabal
             pkgs.haskell-language-server
           ];
         };
