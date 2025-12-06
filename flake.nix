@@ -50,6 +50,10 @@
             pkgs.dune_3
             pkgs.ocamlformat
             pkgs.ocamlPackages.ocaml-lsp
+
+            pkgs.ghc
+            pkgs.haskellPackages.Cabal
+            pkgs.haskell-language-server
           ];
         };
       });
