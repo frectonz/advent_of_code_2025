@@ -53,6 +53,10 @@
 
             pkgs.ghc
             pkgs.haskell-language-server
+
+            pkgs.elmPackages.elm
+            pkgs.elmPackages.elm-format
+            pkgs.elmPackages.elm-language-server
           ];
         };
       });
