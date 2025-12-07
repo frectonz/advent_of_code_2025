@@ -6,3 +6,4 @@
 - Day 4 - Implemented in [Rust](https://rust-lang.org)
 - Day 5 - Implemented in [OCaml](https://ocaml.org)
 - Day 6 - Implemented in [Haskell](https://www.haskell.org)
+- Day 7 - Implemented in [Elm](https://elm-lang.org)
