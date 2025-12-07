@@ -3,11 +3,10 @@ module Part2 exposing (..)
 import Browser
 import Char exposing (Char)
 import Dict exposing (Dict)
-import Example exposing (input)
-import Html exposing (Html, div, h1, hr, table, tbody, td, text, tr)
-import Html.Attributes exposing (attribute)
-import List exposing (all, drop, member)
-import List.Extra exposing (count, getAt, setAt)
+import Html exposing (h1, text)
+import Input exposing (input)
+import List exposing (drop, head)
+import List.Extra exposing (getAt)
 
 
 
@@ -59,44 +58,17 @@ update msg model =
 view : Model -> Browser.Document Msg
 view _ =
     let
+        ( pos, manifold ) =
+            input |> toList
+
         timelines =
-            input |> toList |> processManifold
+            processManifold pos manifold
     in
     { title = "Advent of Code Day 07"
     , body =
-        [ h1 [] [ text ("Manifolds: " ++ (timelines |> List.length |> String.fromInt)) ]
-        , viewManifolds timelines
+        [ h1 [] [ text ("Manifolds: " ++ (timelines |> String.fromInt)) ]
         ]
     }
-
-
-viewManifolds : List Manifold -> Html msg
-viewManifolds manifolds =
-    div [] (List.map (\x -> div [] [ hr [] [], viewManifold x ]) manifolds)
-
-
-viewManifold : Manifold -> Html msg
-viewManifold manifold =
-    table
-        [ attribute "border" "0"
-        , attribute "cellpadding" "4"
-        , attribute "cellspacing" "0"
-        ]
-        [ tbody []
-            (List.map viewRow manifold)
-        ]
-
-
-viewRow : List Char -> Html msg
-viewRow row =
-    tr []
-        (List.map viewCell row)
-
-
-viewCell : Char -> Html msg
-viewCell c =
-    td []
-        [ text (String.fromChar c) ]
 
 
 
@@ -116,175 +88,90 @@ type alias Manifold =
     List (List Char)
 
 
-type alias GetCellCache =
-    Dict ( Int, Int ) (Maybe Char)
-
-
-toList : String -> Manifold
+toList : String -> ( ( Int, Int ), Manifold )
 toList input =
-    input |> String.trim |> String.lines |> List.map String.toList
+    let
+        manifold =
+            input |> String.trim |> String.lines |> List.map String.toList |> drop 1
+
+        middle =
+            manifold
+                |> head
+                |> Maybe.map
+                    (\r ->
+                        let
+                            width =
+                                List.length r
+                        in
+                        (width - 1) // 2
+                    )
+                |> Maybe.withDefault 0
+    in
+    ( ( 0, middle ), manifold )
 
 
-cellAt : Int -> Int -> GetCellCache -> Manifold -> ( Maybe Char, GetCellCache )
-cellAt row col cache manifold =
-    case Dict.get ( row, col ) cache of
-        Just x ->
-            ( x, cache )
+cellAt : Int -> Int -> Manifold -> Maybe Char
+cellAt row col manifold =
+    manifold |> getAt row |> Maybe.andThen (getAt col)
+
+
+cellBelow : Int -> Int -> Manifold -> Maybe Char
+cellBelow row col =
+    cellAt (row + 1) col
+
+
+
+-- processManifold : ( Int, Int ) -> Manifold -> Int
+-- processManifold ( row, col ) manifold =
+--     case cellBelow row col manifold of
+--         Just '.' ->
+--             processManifold ( row + 1, col ) manifold
+--         Just '^' ->
+--             processManifold ( row + 1, col - 1 ) manifold + processManifold ( row + 1, col + 1 ) manifold
+--         _ ->
+--             1
+
+
+type alias Memo =
+    Dict ( Int, Int ) Int
+
+
+processManifold : ( Int, Int ) -> Manifold -> Int
+processManifold pos manifold =
+    process pos manifold Dict.empty |> Tuple.first
+
+
+process : ( Int, Int ) -> Manifold -> Memo -> ( Int, Memo )
+process ( row, col ) manifold memo =
+    case Dict.get ( row, col ) memo of
+        Just cached ->
+            ( cached, memo )
 
         Nothing ->
             let
-                val =
-                    manifold |> getAt row |> Maybe.andThen (getAt col)
+                resultAndMemo =
+                    case cellBelow row col manifold of
+                        Just '.' ->
+                            process ( row + 1, col ) manifold memo
 
-                newCache =
-                    Dict.insert ( row, col ) val cache
+                        Just '^' ->
+                            let
+                                ( left, memo1 ) =
+                                    process ( row + 1, col - 1 ) manifold memo
+
+                                ( right, memo2 ) =
+                                    process ( row + 1, col + 1 ) manifold memo1
+                            in
+                            ( left + right, memo2 )
+
+                        _ ->
+                            ( 1, memo )
             in
-            ( val, newCache )
-
-
-placeAt : Char -> Int -> Int -> GetCellCache -> Manifold -> ( Maybe Manifold, GetCellCache )
-placeAt cell row col cache manifold =
-    case cellAt row col cache manifold of
-        ( Just '.', x ) ->
-            ( Just
-                (List.indexedMap
-                    (\i r ->
-                        if i == row then
-                            setAt col cell r
-
-                        else
-                            r
-                    )
-                    manifold
-                )
-            , x
-            )
-
-        _ ->
-            ( Nothing, cache )
-
-
-processCell : Manifold -> ( Int, Int, Char ) -> ( GetCellCache, List (Maybe Manifold) ) -> ( GetCellCache, List (Maybe Manifold) )
-processCell manifold ( row, col, cell ) ( cache, acc ) =
-    case cell of
-        'S' ->
             let
-                ( newManifold, newCache ) =
-                    placeAt '|' (row + 1) col cache manifold
+                ( result, memoUpdated ) =
+                    resultAndMemo
+
+                memoFinal =
+                    Dict.insert ( row, col ) result memoUpdated
             in
-            ( newCache, newManifold :: acc )
-
-        '^' ->
-            let
-                ( above, cache1 ) =
-                    cellAt (row - 1) col cache manifold
-
-                isTachyonAbove =
-                    above
-                        |> Maybe.map (\c -> c == '|')
-                        |> Maybe.withDefault False
-            in
-            if isTachyonAbove then
-                let
-                    ( left, cache2 ) =
-                        cellAt row (col - 1) cache1 manifold
-                in
-                let
-                    ( right, cache3 ) =
-                        cellAt row (col + 1) cache2 manifold
-                in
-                case ( left, right ) of
-                    ( Just '|', Just '|' ) ->
-                        ( cache3, Just manifold :: acc )
-
-                    ( Just '|', _ ) ->
-                        let
-                            ( newManifold, newCache ) =
-                                placeAt '|' row (col + 1) cache3 manifold
-                        in
-                        ( newCache, newManifold :: acc )
-
-                    ( _, Just '|' ) ->
-                        let
-                            ( newManifold, newCache ) =
-                                placeAt '|' row (col - 1) cache3 manifold
-                        in
-                        ( newCache, newManifold :: acc )
-
-                    _ ->
-                        let
-                            ( newManifoldRight, newCache1 ) =
-                                placeAt '|' row (col + 1) cache3 manifold
-
-                            ( newManifoldLeft, newCache2 ) =
-                                placeAt '|' row (col - 1) newCache1 manifold
-                        in
-                        ( newCache2, newManifoldRight :: newManifoldLeft :: acc )
-
-            else
-                ( cache, acc )
-
-        '.' ->
-            let
-                ( above, cache1 ) =
-                    cellAt (row - 1) col cache manifold
-
-                isTachyonAbove =
-                    above |> Maybe.map (\c -> c == '|') |> Maybe.withDefault False
-            in
-            if isTachyonAbove then
-                let
-                    ( newManifold, newCache ) =
-                        placeAt '|' row col cache1 manifold
-                in
-                ( newCache, newManifold :: acc )
-
-            else
-                ( cache, acc )
-
-        _ ->
-            ( cache, acc )
-
-
-hasEnded : Manifold -> Bool
-hasEnded manifold =
-    manifold
-        |> drop 1
-        |> all (member '|')
-
-
-isValid : Manifold -> Bool
-isValid manifold =
-    manifold
-        |> drop 1
-        |> all (\row -> count ((==) '|') row <= 1)
-
-
-processManifold : Manifold -> List Manifold
-processManifold manifold =
-    if hasEnded manifold then
-        [ manifold ]
-
-    else
-        let
-            manifolds =
-                manifold
-                    |> List.indexedMap
-                        (\i row ->
-                            row
-                                |> List.indexedMap (\j cell -> ( i, j, cell ))
-                        )
-                    |> List.concat
-                    |> List.foldl (processCell manifold) ( Dict.empty, [] )
-                    |> Tuple.second
-                    |> List.filterMap identity
-                    |> List.filter isValid
-                    |> List.Extra.unique
-        in
-        if all hasEnded manifolds then
-            manifolds
-
-        else
-            manifolds
-                |> List.map processManifold
-                |> List.concat
+            ( result, memoFinal )
