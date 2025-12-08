@@ -1,0 +1,16 @@
+{
+	"name": "part-2",
+	"module": "index.ts",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"format": "biome format --write"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.8",
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	}
+}

@@ -71,18 +71,19 @@ async function main() {
 	const uf = new UnionFind(n);
 	distances.sort((a, b) => a[0] - b[0]);
 
-	const limit = 1000;
-	const len = Math.min(distances.length, limit);
+	let last: [number, number] = [0, 1];
 
-	for (let i = 0; i < len; i++) {
-		const [, firstInd, secondInd] = distances[i]!;
-		uf.union(firstInd, secondInd);
+	for (let i = 0; i < distances.length; i++) {
+		const [_, firstInd, secondInd] = distances[i]!;
+		if (uf.union(firstInd, secondInd)) {
+			last = [firstInd, secondInd];
+		}
 	}
 
-	const sortedComp = [...uf.size].sort((a, b) => b - a);
-	const [x, y, z] = sortedComp;
+	const { x: x1 } = coordinates[last[0]!]!;
+	const { x: x2 } = coordinates[last[1]!]!;
 
-	console.log(x! * y! * z!);
+	console.log(x1 * x2);
 }
 
 main();
