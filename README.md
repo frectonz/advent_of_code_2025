@@ -8,3 +8,4 @@
 - Day 6 - Implemented in [Haskell](https://www.haskell.org)
 - Day 7 - Implemented in [Elm](https://elm-lang.org)
 - Day 8 - Implemented in [TypeScript](https://www.typescriptlang.org)
+- Day 9 - Implemented in [Rust](https://rust-lang.org)
