@@ -59,6 +59,9 @@
             pkgs.elmPackages.elm-language-server
 
             pkgs.bun
+
+            pkgs.rust-analyzer
+            pkgs.rust-bin.stable.latest.default
           ];
         };
       });
