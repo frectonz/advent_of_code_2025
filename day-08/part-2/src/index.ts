@@ -1,3 +1,5 @@
+// https://github.com/biniyamNegasa/aoc/blob/main/2025/8/a.py
+
 class UnionFind {
 	par: number[];
 	size: number[];
