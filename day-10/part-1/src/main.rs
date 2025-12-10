@@ -1,3 +1,5 @@
+use std::collections::{HashSet, VecDeque};
+
 use nom::{
     IResult, Parser,
     bytes::complete::take_while,
@@ -5,13 +7,13 @@ use nom::{
         self,
         complete::{char, space1},
     },
-    multi::{many1, separated_list1},
+    multi::separated_list1,
     sequence::delimited,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Hash, Clone)]
 struct Button {
-    presses: Vec<u32>,
+    lights: Vec<u32>,
 }
 
 fn parse_button(i: &str) -> IResult<&str, Button> {
@@ -22,14 +24,64 @@ fn parse_button(i: &str) -> IResult<&str, Button> {
     )
     .parse(i)?;
 
-    Ok((i, Button { presses }))
+    Ok((i, Button { lights: presses }))
 }
 
 #[derive(Debug)]
 struct Machine {
     lights: String,
     buttons: Vec<Button>,
-    junctions: Vec<u32>,
+    _junctions: Vec<u32>,
+}
+
+impl Machine {
+    fn min_presses(&self) -> u32 {
+        let target: u32 = self
+            .lights
+            .chars()
+            .enumerate()
+            .filter(|(_, c)| *c == '#')
+            .map(|(i, _)| i as u32)
+            .fold(0u32, |acc, idx| acc | (1u32 << idx));
+
+        let button_masks: Vec<u32> = self
+            .buttons
+            .iter()
+            .map(|btn| {
+                btn.lights
+                    .iter()
+                    .fold(0u32, |acc, &idx| acc | (1u32 << idx))
+            })
+            .collect();
+
+        let start: u32 = 0;
+
+        if start == target {
+            return 0;
+        }
+
+        let mut queue: VecDeque<(u32, u32)> = VecDeque::new();
+        let mut visited: HashSet<u32> = HashSet::new();
+
+        queue.push_back((start, 0));
+        visited.insert(start);
+
+        while let Some((state, steps)) = queue.pop_front() {
+            for &bmask in &button_masks {
+                let next = state ^ bmask;
+
+                if next == target {
+                    return steps + 1;
+                }
+
+                if visited.insert(next) {
+                    queue.push_back((next, steps + 1));
+                }
+            }
+        }
+
+        unreachable!("should not be here")
+    }
 }
 
 fn parse_lights(i: &str) -> IResult<&str, String> {
@@ -65,7 +117,7 @@ fn parse_machine(i: &str) -> IResult<&str, Machine> {
         Machine {
             lights,
             buttons,
-            junctions,
+            _junctions: junctions,
         },
     ))
 }
@@ -73,11 +125,13 @@ fn parse_machine(i: &str) -> IResult<&str, Machine> {
 fn main() {
     let input = include_str!("../inputs/example.txt");
 
-    let machines = input
+    let machines: Vec<Machine> = input
         .trim()
         .lines()
         .flat_map(|line| parse_machine(line).map(|x| x.1).ok())
-        .collect::<Vec<_>>();
+        .collect();
 
-    dbg!(machines);
+    let total: u32 = machines.iter().map(|m| m.min_presses()).sum();
+
+    println!("Total minimum presses: {total}");
 }
