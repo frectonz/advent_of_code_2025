@@ -10,3 +10,4 @@
 - Day 8 - Implemented in [TypeScript](https://www.typescriptlang.org)
 - Day 9 - Implemented in [Rust](https://rust-lang.org)
 - Day 10 - Implemented in [Rust](https://rust-lang.org)
+- Day 11 - Implemented in [Rust](https://rust-lang.org)
