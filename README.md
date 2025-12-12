@@ -11,3 +11,4 @@
 - Day 9 - Implemented in [Rust](https://rust-lang.org)
 - Day 10 - Implemented in [Rust](https://rust-lang.org)
 - Day 11 - Implemented in [Rust](https://rust-lang.org)
+- Day 12 - Implemented in [Rust](https://rust-lang.org)
